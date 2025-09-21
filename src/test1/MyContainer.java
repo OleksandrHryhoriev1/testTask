@@ -8,6 +8,8 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 public class MyContainer extends JPanel {
 
@@ -38,8 +40,9 @@ public class MyContainer extends JPanel {
       }
     }
 
-    sendInterfaceData();
+    addMouseSupport();
 
+    sendInterfaceData();
   }
 
   private void sendInterfaceData() {
@@ -63,6 +66,47 @@ public class MyContainer extends JPanel {
   public void keyRight() {
     if (highlightIndex < panelsCount - 1)
       highlightIndex++;
+
+    sendInterfaceData();
+  }
+
+  private void addMouseSupport() {
+    for (int i = 0; i < panelsCount; i++) {
+      final int index = i;
+      panels[i].addMouseListener(new MouseAdapter() {
+        @Override
+        public void mouseEntered(MouseEvent e) {
+          highlightIndex = index;
+          sendInterfaceData();
+        }
+
+        @Override
+        public void mouseExited(MouseEvent e) {
+          sendInterfaceData();
+        }
+
+        @Override
+        public void mouseClicked(MouseEvent e) {
+          removePanelWithDownShift(highlightIndex);
+
+        }
+      });
+    }
+  }
+
+  private void removePanelWithDownShift(int index) {
+    int cols = 4;
+    int row = index / cols;
+    int col = index % cols;
+
+    for (int r = row; r < 3; r++) {
+      int current = r * cols + col;
+      int below = (r + 1) * cols + col;
+
+      panels[current].setText(panels[below].getText());
+    }
+
+    panels[3 * cols + col].setText("");
 
     sendInterfaceData();
   }
