@@ -1,114 +1,203 @@
 package test1;
 
 import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridLayout;
+
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionAdapter;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingConstants;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
+import javax.swing.SwingUtilities;
+import javax.swing.border.Border;
 
 public class MyContainer extends JPanel {
 
-  public int panelsCount = 16;
-  int highlightIndex = 6;
-  JLabel[] panels = new JLabel[panelsCount];
-  SwingTemplate st;
+  private int rows = 4;
+  private int cols = 4;
+  private final SwingTemplate parentFrame;
+  private Theme theme;
 
-  public MyContainer(int windowWidth, int windowHeight, SwingTemplate st) {
-    this.setSize(windowWidth, windowHeight);
-    this.st = st;
+  private String[] model;
+  private JLabel[] cells;
 
-    this.setLayout(new GridLayout(4, 4));
+  private int highlightIndex = 6;
+  private int draggingIndex = -1;
 
-    Font labelFont = this.getFont();
-    Font myFont = new Font(labelFont.getName(), Font.PLAIN, 30);
+  private static final int FONT_SIZE = 30;
 
-    for (int i = 0; i < panelsCount; i++) {
-      panels[i] = new JLabel();
-      panels[i].setBorder(BorderFactory.createLineBorder(Color.blue));
-      panels[i].setFont(myFont);
-      panels[i].setText(String.valueOf(i));
-      panels[i].setHorizontalAlignment(SwingConstants.CENTER);
-      this.add(panels[i]);
+  public MyContainer(int width, int height, SwingTemplate parentFrame, Theme theme) {
+    this.parentFrame = parentFrame;
+    this.theme = theme;
+    setPreferredSize(new Dimension(width, height));
+    setLayout(new GridLayout(rows, cols));
 
-      if (i == highlightIndex) {
-        panels[i].setBorder(BorderFactory.createLineBorder(Color.green, 3));
+    initModel();
+    initCells();
+    applyTheme();
+    updateUIState();
+  }
+
+  private void initModel() {
+    model = new String[rows * cols];
+    for (int i = 0; i < model.length; i++)
+      model[i] = String.valueOf(i);
+  }
+
+  private void initCells() {
+    removeAll();
+    cells = new JLabel[rows * cols];
+    for (int i = 0; i < cells.length; i++)
+      add(cells[i] = createCell(i));
+  }
+
+  private JLabel createCell(int index) {
+    JLabel cell = new JLabel(model[index], SwingConstants.CENTER);
+    cell.setFont(new Font(getFont().getName(), Font.PLAIN, FONT_SIZE));
+
+    cell.addMouseListener(new MouseAdapter() {
+      @Override
+      public void mouseEntered(MouseEvent e) {
+        highlightIndex = index;
+        updateUIState();
       }
-    }
 
-    addMouseSupport();
-
-    sendInterfaceData();
-  }
-
-  private void sendInterfaceData() {
-    for (int i = 0; i < panelsCount; i++) {
-      if (i == highlightIndex) {
-        panels[i].setBorder(BorderFactory.createLineBorder(Color.green, 3));
-      } else {
-        panels[i].setBorder(BorderFactory.createLineBorder(Color.blue));
+      @Override
+      public void mousePressed(MouseEvent e) {
+        draggingIndex = index;
       }
+
+      @Override
+      public void mouseReleased(MouseEvent e) {
+        if (draggingIndex == -1)
+          return;
+
+        Component comp = getComponentAt(
+            SwingUtilities.convertPoint(cell, e.getPoint(), MyContainer.this));
+        if (comp instanceof JLabel target && target != cell) {
+          int targetIndex = indexOf(target);
+          swapModel(draggingIndex, targetIndex);
+          syncViewFromModel();
+          highlightIndex = targetIndex;
+        }
+        draggingIndex = -1;
+      }
+
+      @Override
+      public void mouseClicked(MouseEvent e) {
+        removeCellWithDownShift(index);
+      }
+    });
+
+    cell.addMouseMotionListener(new MouseMotionAdapter() {
+      @Override
+      public void mouseDragged(MouseEvent e) {
+        Component c = getComponentAt(SwingUtilities.convertPoint(cell, e.getPoint(), MyContainer.this));
+        if (c instanceof JLabel targetCell && targetCell != cell) {
+          targetCell.setBorder(BorderFactory.createLineBorder(Color.RED, 2));
+        }
+      }
+    });
+
+    return cell;
+  }
+
+  private int indexOf(Component c) {
+    for (int i = 0; i < cells.length; i++)
+      if (cells[i] == c)
+        return i;
+    return -1;
+  }
+
+  private void swapModel(int a, int b) {
+    String tmp = model[a];
+    model[a] = model[b];
+    model[b] = tmp;
+  }
+
+  private void syncViewFromModel() {
+    for (int i = 0; i < model.length; i++)
+      cells[i].setText(model[i]);
+    applyTheme();
+  }
+
+  public void resizeGrid(int newRows, int newCols) {
+    String[] old = model;
+    int oldCount = old.length;
+
+    rows = newRows;
+    cols = newCols;
+    setLayout(new GridLayout(rows, cols));
+
+    model = new String[rows * cols];
+    for (int i = 0; i < model.length; i++)
+      model[i] = i < oldCount ? old[i] : String.valueOf(i);
+
+    initCells();
+    highlightIndex = Math.min(highlightIndex, model.length - 1);
+    revalidate();
+    repaint();
+  }
+
+  private void applyTheme() {
+    if (theme == null)
+      return;
+
+    setBackground(theme.getBackgroundColor());
+    Border normal = BorderFactory.createLineBorder(theme.getBorderColor());
+    Border highlight = BorderFactory.createLineBorder(theme.getHighlightColor(), 3);
+    Color textColor = theme.getTextColor();
+
+    if (cells == null)
+      return;
+    for (int i = 0; i < cells.length; i++) {
+      cells[i].setForeground(textColor);
+      cells[i].setBorder(i == highlightIndex ? highlight : normal);
     }
-    st.setTitle("Selected index is " + String.valueOf(highlightIndex));
   }
 
-  public void keyLeft() {
-    if (highlightIndex > 0)
-      highlightIndex--;
-
-    sendInterfaceData();
+  public void setTheme(Theme theme) {
+    this.theme = theme;
+    applyTheme();
+    repaint();
   }
 
-  public void keyRight() {
-    if (highlightIndex < panelsCount - 1)
-      highlightIndex++;
-
-    sendInterfaceData();
+  private void updateUIState() {
+    applyTheme();
+    parentFrame.setTitle("Selected index: " + highlightIndex);
   }
 
-  private void addMouseSupport() {
-    for (int i = 0; i < panelsCount; i++) {
-      final int index = i;
-      panels[i].addMouseListener(new MouseAdapter() {
-        @Override
-        public void mouseEntered(MouseEvent e) {
-          highlightIndex = index;
-          sendInterfaceData();
-        }
+  public void moveSelection(Direction dir) {
+    int row = highlightIndex / cols;
+    int col = highlightIndex % cols;
 
-        @Override
-        public void mouseExited(MouseEvent e) {
-          sendInterfaceData();
-        }
-
-        @Override
-        public void mouseClicked(MouseEvent e) {
-          removePanelWithDownShift(highlightIndex);
-
-        }
-      });
+    switch (dir) {
+      case LEFT -> col = Math.max(0, col - 1);
+      case RIGHT -> col = Math.min(cols - 1, col + 1);
+      case UP -> row = Math.max(0, row - 1);
+      case DOWN -> row = Math.min(rows - 1, row + 1);
     }
+
+    highlightIndex = row * cols + col;
+    updateUIState();
   }
 
-  private void removePanelWithDownShift(int index) {
-    int cols = 4;
-    int row = index / cols;
+  private void removeCellWithDownShift(int index) {
     int col = index % cols;
-
-    for (int r = row; r < 3; r++) {
-      int current = r * cols + col;
-      int below = (r + 1) * cols + col;
-
-      panels[current].setText(panels[below].getText());
-    }
-
-    panels[3 * cols + col].setText("");
-
-    sendInterfaceData();
+    int row = index / cols;
+    for (int r = row; r < rows - 1; r++)
+      model[r * cols + col] = model[(r + 1) * cols + col];
+    model[(rows - 1) * cols + col] = "";
+    syncViewFromModel();
   }
 
+  public enum Direction {
+    LEFT, RIGHT, UP, DOWN
+  }
 }

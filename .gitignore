@@ -1,6 +1,7 @@
 .idea/
 .settings/
 bin/
+out/
 src/test1/MyContainer.class
 src/test1/MyContainer$1.class
 src/test1/SwingTemplate.class
