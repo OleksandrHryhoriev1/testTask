@@ -7,10 +7,10 @@ modular classes for clean design and maintainability.
 
 ## **Features**
 
--   **Resizable Grid:**\
+-   **Resizable Grid:**
     > The grid can be resized dynamically via the menu (4x4, 5x5, 6x6).
 
--   **Keyboard Navigation:**\
+-   **Keyboard Navigation:**
     > Use arrow keys to move the highlighted selection across the grid.
 
 -   **Mouse Interaction:**
@@ -22,28 +22,25 @@ modular classes for clean design and maintainability.
     -   **Drag-and-Drop:** Swap values between cells by dragging and
         > releasing.
 
--   **Themes:**\
+-   **Themes:**
     > Supports Light and Dark themes. Themes affect background color,
     > borders, highlight color, and text color. Can be switched via the
     > menu.
 
--   **Minimalist, Maintainable Code:**\
+-   **Minimalist, Maintainable Code:**
     > Uses a clear separation between model (data) and view (JLabel
     > cells).
 
 ## **Project Structure**
-
+```
 test1/
-
 ├── MyContainer.java
-
 ├── SwingTemplate.java
-
 ├── Theme.java
-
 ├── LightTheme.java
+└── DarkTheme.java
+```
 
-├── DarkTheme.java
 
 -   **MyContainer.java**
 
@@ -85,20 +82,20 @@ test1/
 
 ## **Key Design Decisions**
 
--   **Model-View Separation:**\
+-   **Model-View Separation:**
     > The grid data (model\[\]) is separate from the visual
     > representation (JLabel\[\]). This allows easy updates and clean
     > synchronization.
 
--   **Minimal Drag-and-Drop:**\
+-   **Minimal Drag-and-Drop:**
     > Drag highlights the target cell temporarily using a red border;
     > releasing swaps values.
 
--   **Dynamic Themes:**\
+-   **Dynamic Themes:**
     > Theme changes propagate to all cells immediately without
     > recreating components.
 
--   **Keyboard Navigation:**\
+-   **Keyboard Navigation:**
     > Arrow keys change highlightIndex efficiently, updating only the
     > necessary visual states.
 
